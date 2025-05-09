@@ -1,6 +1,33 @@
 <script>
     import "../style.css";
     import Test from "./Test.svelte"
+    import {p_send} from "$lib/protocol.js";
+    import {onMount} from "svelte";
+
+    onMount(() => {
+        p_send("/v0/cmd/meta/type_layers+type_nodes").then((data) => {
+            // result payload:
+            // const array = new Uint16Array([0x05 | (0x1 << 2 << 8), (0x1 | 0x2)]);
+
+            let status = data.uint8();
+            console.log(`[message] Received data from server: ${data.raw.byteLength}, ${status}`);
+
+            let layers_type = data.uint32();
+
+            for (let i = 0; i < layers_type; i++) {
+                console.log(data.int8());
+                console.log(data.str());
+            }
+
+            let nodes_type = data.uint64();
+
+            for (let i = 0; i < nodes_type; i++) {
+                console.log(data.uint32());
+                console.log(data.str());
+            }
+        });
+    })
+
 </script>
 
 
