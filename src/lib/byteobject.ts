@@ -1,3 +1,4 @@
+import { getDataTypes } from "$lib/objects";
 
 export class ByteObject {
     data: DataView;
@@ -72,7 +73,17 @@ export class ByteObject {
         return ByteObject.decoder.decode(new Uint8Array(sliced));
     }
 
-    arrayOf(types: string[] | string, sizeType: string = "uint32"): Array<any> {
+    object(type: (new (...args: any[]) => any)) {
+        let args: any = {};
+
+        for (const [key, value] of Object.entries(getDataTypes(new type))) {
+            args[String(key)] = ((<any>this)[String(value)]());
+        }
+
+        return new type(args);
+    }
+
+    arrayOf(type: string[] | string | (new (...args: any[]) => any), sizeType: string = "uint32"): Array<any> {
         let size = (<any>this)[sizeType]();
 
         let result = [];
@@ -80,13 +91,15 @@ export class ByteObject {
         for (let i = 0; i < size; i++) {
             let item;
 
-            if (typeof types === "string") {
-                item = (<any>this)[types]();
+            if (typeof type === "string") {
+                item = (<any>this)[type]();
+            } else if (typeof type == "function") {
+                item = this.object(type);
             } else {
                 item = [];
 
-                types.forEach((type) => {
-                    item.push((<any>this)[type]());
+                type.forEach((elem) => {
+                    item.push((<any>this)[elem]());
                 });
             }
 

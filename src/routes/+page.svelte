@@ -3,6 +3,7 @@
     import Test from "./Test.svelte"
     import {p_send} from "$lib/protocol.js";
     import {onMount} from "svelte";
+    import {LayerType, NodeType} from "$lib/objects.js";
 
     onMount(() => {
         p_send("/v0/cmd/meta/type_layers+type_nodes").then((data) => {
@@ -13,8 +14,8 @@
             console.log(`[message] Received data from server: ${data.raw.byteLength}, ${status}`);
 
             let result = {
-                layers: data.arrayOf(["int8", "str"]),
-                nodes_type: data.arrayOf(["uint32", "str"], "uint64")
+                layers: data.arrayOf(LayerType),
+                nodes_type: data.arrayOf(NodeType, "uint64")
             };
 
             console.log(result);

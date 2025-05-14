@@ -1,5 +1,4 @@
 
-
 export const INSTRUCTION_MASK = 0xFF;
 
 export const CREATE  = 0x01;

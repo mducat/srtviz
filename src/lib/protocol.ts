@@ -2,24 +2,10 @@ import { send } from "$lib/ws.svelte";
 import { ByteObject, WritableByteObject } from "$lib/byteobject";
 import * as rfc from "$lib/rfc";
 
-import 'reflect-metadata';
 
 
-const typeKey = Symbol("typeKey");
 
-function Typed(type: string) {
-    return Reflect.metadata(typeKey, type);
-}
-
-class Layer {
-    @Typed("uint8")
-    id: number = 0;
-
-    name: string = "";
-}
-
-
-var request_id = 0;
+let request_id = 0;
 
 function create(dirs: string[], obj: WritableByteObject, data?: any) {
     obj.wUint8(rfc.CREATE);
