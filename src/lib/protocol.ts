@@ -2,35 +2,50 @@ import { send } from "$lib/ws.svelte";
 import { ByteObject, WritableByteObject } from "$lib/byteobject";
 import * as rfc from "$lib/rfc";
 
+import 'reflect-metadata';
+
+
+const typeKey = Symbol("typeKey");
+
+function Typed(type: string) {
+    return Reflect.metadata(typeKey, type);
+}
+
+class Layer {
+    @Typed("uint8")
+    id: number = 0;
+
+    name: string = "";
+}
+
 
 var request_id = 0;
 
 function create(dirs: string[], obj: WritableByteObject, data?: any) {
-    obj.wUint16(rfc.CREATE);
+    obj.wUint8(rfc.CREATE);
     return obj;
 }
 
 function read(dirs: string[], obj: WritableByteObject, data?: any) {
-    obj.wUint16(rfc.READ);
+    obj.wUint8(rfc.READ);
     return obj;
 }
 
 function update(dirs: string[], obj: WritableByteObject, data?: any) {
-    obj.wUint16(rfc.UPDATE);
+    obj.wUint8(rfc.UPDATE);
     return obj;
 }
 
 function del(dirs: string[], obj: WritableByteObject, data?: any) {
-    obj.wUint16(rfc.DELETE);
+    obj.wUint8(rfc.DELETE);
     return obj;
 }
 
 function command(dirs: string[], obj: WritableByteObject, data?: any) {
-    let opcode = rfc.COMMAND;
+    obj.wUint8(rfc.COMMAND);
 
     if (dirs[2] === "meta") {
-        opcode |= rfc.CMD_META;
-        obj.wUint16(opcode);
+        obj.wUint16(rfc.CMD_META);
 
         let meta_items = dirs[3].split("+");
         let meta_opcode = 0;

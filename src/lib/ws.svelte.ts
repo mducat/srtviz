@@ -16,30 +16,41 @@ export const state : State = $state({
 
 
 let ws : WebSocket;
+let connecting : boolean = false;
+
+function onMessage(event: any) {
+    let data = new ByteObject(event.data);
+
+    let request_id = Number(data.uint64());
+
+    state.requests[request_id](data);
+    delete state.requests[request_id];
+}
+
+let pendingRequests: ByteObject[] = [];
 
 export const connect = () => {
+    if (connecting) { return null; }
+
+    connecting = true;
+
     ws = new WebSocket(`ws://${window.location.hostname}:16180`);
     ws.binaryType = "arraybuffer";
 
-    let promise = new Promise((resolve) => {
-        ws.onopen = function(e) {
+    return new Promise((resolve) => {
+        ws.onopen = function (e) {
             console.log("[open] Connection established");
+
+            pendingRequests.forEach(request => {
+                ws.send(request.raw);
+            });
 
             state.connected = true;
             resolve(state.connected);
         }
 
-        ws.addEventListener("message", (event: any) => {
-            let data = new ByteObject(event.data);
-
-            let request_id = Number(data.uint64());
-
-            state.requests[request_id](data);
-            delete state.requests[request_id];
-        });
+        ws.addEventListener("message", onMessage);
     });
-
-    return promise;
 };
 
 
@@ -66,22 +77,17 @@ export const connect = () => {
  */
 
 
+
 export const send = (req: ByteObject, cb: (r: ByteObject) => void) => {
+    let request_id = Number(req.uint64());
+
+    state.requests[request_id] = cb;
+
     if (!state.connected) {
-        // @TODO: fix this shit
+        pendingRequests.push(req);
 
-        connect().then(() => {
-            let request_id = Number(req.uint64());
-            state.requests[request_id] = cb;
-
-            ws.send(req.raw);
-        });
-
+        connect();
     } else {
-
-        let request_id = Number(req.uint64());
-        state.requests[request_id] = cb;
-
         ws.send(req.raw);
     }
 }

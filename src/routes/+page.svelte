@@ -12,19 +12,12 @@
             let status = data.uint8();
             console.log(`[message] Received data from server: ${data.raw.byteLength}, ${status}`);
 
-            let layers_type = data.uint32();
+            let result = {
+                layers: data.arrayOf(["int8", "str"]),
+                nodes_type: data.arrayOf(["uint32", "str"], "uint64")
+            };
 
-            for (let i = 0; i < layers_type; i++) {
-                console.log(data.int8());
-                console.log(data.str());
-            }
-
-            let nodes_type = data.uint64();
-
-            for (let i = 0; i < nodes_type; i++) {
-                console.log(data.uint32());
-                console.log(data.str());
-            }
+            console.log(result);
         });
     })
 

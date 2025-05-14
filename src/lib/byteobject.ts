@@ -71,6 +71,30 @@ export class ByteObject {
 
         return ByteObject.decoder.decode(new Uint8Array(sliced));
     }
+
+    arrayOf(types: string[] | string, sizeType: string = "uint32"): Array<any> {
+        let size = (<any>this)[sizeType]();
+
+        let result = [];
+
+        for (let i = 0; i < size; i++) {
+            let item;
+
+            if (typeof types === "string") {
+                item = (<any>this)[types]();
+            } else {
+                item = [];
+
+                types.forEach((type) => {
+                    item.push((<any>this)[type]());
+                });
+            }
+
+            result.push(item);
+        }
+
+        return result;
+    }
 }
 
 
