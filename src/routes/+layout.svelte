@@ -1,8 +1,5 @@
 <script>
-    import Test from "./Test.svelte";
     import "../style.css";
-
-    import { setContext } from 'svelte'
 
     let { children } = $props();
 </script>
@@ -41,7 +38,6 @@
             </div>
         </div>
         <!-- Page content here -->
-        <Test/>
     </div>
     <div class="drawer-side">
         <label for="my-drawer-3" aria-label="close sidebar" class="drawer-overlay"></label>

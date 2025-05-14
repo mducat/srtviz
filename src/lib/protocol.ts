@@ -87,13 +87,3 @@ export const p_send: (p: string, d?: any) => Promise<ByteObject> = (path: string
         send(obj, resolve);
     });
 }
-
-/*
-p_send("/v0/read/project");
-
-p_send("/v0/delete/project");
-
-p_send("/v0/update/project");
-
-p_send("/v0/create/project");
-*/

@@ -1,4 +1,5 @@
 import {ByteObject} from "$lib/byteobject";
+import * as rfc from "./rfc";
 
 type RequestsBuffer = {
     [id: number]: (req: ByteObject) => void;
@@ -23,6 +24,11 @@ function onMessage(event: any) {
 
     let request_id = Number(data.uint64());
 
+    let status = data.uint8();
+    if (status != rfc.STATUS_OK) {
+        console.error("[ws] Error received from server", status);
+    }
+
     state.requests[request_id](data);
     delete state.requests[request_id];
 }
@@ -39,7 +45,7 @@ export const connect = () => {
 
     return new Promise((resolve) => {
         ws.onopen = function (e) {
-            console.log("[open] Connection established");
+            console.log("[ws] Connection established");
 
             pendingRequests.forEach(request => {
                 ws.send(request.raw);
