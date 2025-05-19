@@ -36,6 +36,13 @@ export class ByteObject {
         return value;
     }
 
+    int64() {
+        let value = this.data.getBigInt64(this.cursor, this.endian);
+        this.cursor += 8;
+
+        return value;
+    }
+
     uint8() {
         let value = this.data.getUint8(this.cursor);
         this.cursor += 1;
@@ -85,6 +92,7 @@ export class ByteObject {
 
     arrayOf(type: string[] | string | (new (...args: any[]) => any), sizeType: string = "uint32"): Array<any> {
         let size = (<any>this)[sizeType]();
+        // console.debug("size", size);
 
         let result = [];
 

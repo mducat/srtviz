@@ -9,11 +9,37 @@ let request_id = 0;
 
 function create(dirs: string[], obj: WritableByteObject, data?: any) {
     obj.wUint8(rfc.CREATE);
+
+    switch (dirs[2]) {
+        case "project":
+            obj.wUint8(rfc.INSTANCE_PROJECT);
+            break;
+        case "layer":
+            obj.wUint8(rfc.INSTANCE_LAYER);
+            break;
+        case "object":
+            obj.wUint8(rfc.INSTANCE_OBJECT);
+            break;
+    }
+
     return obj;
 }
 
 function read(dirs: string[], obj: WritableByteObject, data?: any) {
     obj.wUint8(rfc.READ);
+
+    switch (dirs[2]) {
+        case "project":
+            obj.wUint8(rfc.INSTANCE_PROJECT);
+            break;
+        case "layer":
+            obj.wUint8(rfc.INSTANCE_LAYER);
+            break;
+        case "object":
+            obj.wUint8(rfc.INSTANCE_OBJECT);
+            break;
+    }
+
     return obj;
 }
 
@@ -50,6 +76,10 @@ function command(dirs: string[], obj: WritableByteObject, data?: any) {
         obj.wUint8(meta_opcode);
     }
 
+    if (dirs[2] === "status") {
+        obj.wUint16(rfc.CMD_STATUS);
+    }
+
     return obj;
 }
 
@@ -67,7 +97,7 @@ let factory: Factory = {
     "cmd": command,
 };
 
-export const p_send: (p: string, d?: any) => Promise<ByteObject> = (path: string, data?: any) => {
+export const p_send: (p: string, d?: any) => Promise<ByteObject> | null = (path: string, data?: any) => {
 
     let obj = new WritableByteObject();
 
@@ -78,12 +108,20 @@ export const p_send: (p: string, d?: any) => Promise<ByteObject> = (path: string
             obj.wUint64(BigInt(request_id));
             request_id ++;
             break;
+        default:
+            console.error("[protocol] Error formatting the following route:", path);
+            return null;
+    }
+
+    if (!factory[dirs[1]]) {
+        console.error("[protocol] Error formatting the following route:", path);
+        return null;
     }
 
     obj = factory[dirs[1]](dirs, obj, data);
 
     return new Promise((resolve) => {
         obj.compile();
-        send(obj, resolve);
+        send(obj, resolve, {path: path, data: data});
     });
 }

@@ -5,13 +5,19 @@ type RequestsBuffer = {
     [id: number]: (req: ByteObject) => void;
 }
 
+type DebugBuffer = {
+    [id: string]: any
+}
+
 type State = {
+    debug: DebugBuffer;
     requests: RequestsBuffer;
     connected: boolean;
 };
 
 export const state : State = $state({
     requests: {},
+    debug: {},
     connected: false,
 });
 
@@ -26,11 +32,27 @@ function onMessage(event: any) {
 
     let status = data.uint8();
     if (status != rfc.STATUS_OK) {
-        console.error("[ws] Error received from server", status);
+        console.error("[ws] Error received from server with request ID", request_id);
+        console.error(`[ws] Debug inf:`, $state.snapshot(state.debug[request_id]));
+
+        switch (status) {
+            case rfc.STATUS_INTERNAL_ERROR:
+                console.error("[ws] Internal Error", status);
+                break;
+            case rfc.STATUS_INTERNAL_PANIC:
+                console.error("[ws] Internal Panic", status);
+                break;
+            default: console.error("[ws] Unrecognized status", status);
+        }
+
+        return;
     }
+
+    // data.cursor -= 1;
 
     state.requests[request_id](data);
     delete state.requests[request_id];
+    delete state.debug[request_id];
 }
 
 let pendingRequests: ByteObject[] = [];
@@ -84,10 +106,11 @@ export const connect = () => {
 
 
 
-export const send = (req: ByteObject, cb: (r: ByteObject) => void) => {
+export const send = (req: ByteObject, cb: (r: ByteObject) => void, debug: any) => {
     let request_id = Number(req.uint64());
 
     state.requests[request_id] = cb;
+    state.debug[request_id] = debug;
 
     if (!state.connected) {
         pendingRequests.push(req);

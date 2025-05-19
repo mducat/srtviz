@@ -8,11 +8,11 @@ export const DELETE  = 0x04;
 export const COMMAND = 0x05;
 
 
-export const INSTANCE_MASK = 0xFF << 8;
+export const INSTANCE_MASK = 0xFF;
 
-export const INSTANCE_PROJECT = 0x1 << 0 << 8;
-export const INSTANCE_LAYER   = 0x1 << 1 << 8;
-export const INSTANCE_OBJECT  = 0x1 << 2 << 8;
+export const INSTANCE_PROJECT = 0x1 << 0;
+export const INSTANCE_LAYER   = 0x1 << 1;
+export const INSTANCE_OBJECT  = 0x1 << 2;
 
 
 export const CMD_MASK    = 0xFF << 8;

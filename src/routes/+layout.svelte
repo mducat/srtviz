@@ -1,10 +1,13 @@
 <script>
     import "../style.css";
+    import { Toasts } from 'svoast';
 
     let { children } = $props();
 </script>
 
 
+
+<Toasts position="bottom-right" />
 
 <div class="drawer">
     <input id="my-drawer-3" type="checkbox" class="drawer-toggle" />
@@ -28,7 +31,7 @@
                     </svg>
                 </label>
             </div>
-            <div class="mx-2 flex-1 px-2">Navbar Title</div>
+            <div class="mx-2 flex-1 px-2">Matrix UI</div>
             <div class="hidden flex-none lg:block">
                 <ul class="menu menu-horizontal">
                     <!-- Navbar menu content here -->
