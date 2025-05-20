@@ -7,95 +7,96 @@ import * as rfc from "$lib/rfc";
 
 let request_id = 0;
 
-function create(dirs: string[], obj: WritableByteObject, data?: any) {
-    obj.wUint8(rfc.CREATE);
+type Instructions = {
+    [id: string]: {
+        magic: number,
+        sub?: Instructions,
+        multiple?: boolean,
+        subSize?: string
+    };
+};
 
-    switch (dirs[2]) {
-        case "project":
-            obj.wUint8(rfc.INSTANCE_PROJECT);
-            break;
-        case "layer":
-            obj.wUint8(rfc.INSTANCE_LAYER);
-            break;
-        case "object":
-            obj.wUint8(rfc.INSTANCE_OBJECT);
-            break;
-    }
+let objTypes: Instructions = {
+    "project": { magic: rfc.INSTANCE_PROJECT },
+    "layer":   { magic: rfc.INSTANCE_LAYER },
+    "object":  { magic: rfc.INSTANCE_OBJECT }
+};
 
-    return obj;
-}
+let metaItems: Instructions = {
+    "type_layers": { magic: rfc.META_LIST_LAYERS_TYPE },
+    "type_nodes":  { magic: rfc.META_LIST_NODES_TYPE },
+};
 
-function read(dirs: string[], obj: WritableByteObject, data?: any) {
-    obj.wUint8(rfc.READ);
+let commands: Instructions = {
+    "meta":   { magic: rfc.CMD_META, sub: metaItems, multiple: true },
+    "status": { magic: rfc.CMD_STATUS },
+};
 
-    switch (dirs[2]) {
-        case "project":
-            obj.wUint8(rfc.INSTANCE_PROJECT);
-            break;
-        case "layer":
-            obj.wUint8(rfc.INSTANCE_LAYER);
-            break;
-        case "object":
-            obj.wUint8(rfc.INSTANCE_OBJECT);
-            break;
-    }
+let instructions: Instructions = {
+    "create":   { magic: rfc.CREATE,  sub: objTypes },
+    "read":     { magic: rfc.READ,    sub: objTypes },
+    "update":   { magic: rfc.UPDATE,  sub: objTypes },
+    "delete":   { magic: rfc.DELETE,  sub: objTypes },
+    "del":      { magic: rfc.DELETE,  sub: objTypes },
+    "command":  { magic: rfc.COMMAND, sub: commands, subSize: "wUint16" },
+    "cmd":      { magic: rfc.COMMAND, sub: commands, subSize: "wUint16" },
+};
 
-    return obj;
-}
+console.log(instructions);
 
-function update(dirs: string[], obj: WritableByteObject, data?: any) {
-    obj.wUint8(rfc.UPDATE);
-    return obj;
-}
+// @todo delete this
+function writer_v0(dirs: string[], obj: WritableByteObject, data?: any): WritableByteObject | null {
+    let current: Instructions | null = instructions;
+    let multiple = false;
 
-function del(dirs: string[], obj: WritableByteObject, data?: any) {
-    obj.wUint8(rfc.DELETE);
-    return obj;
-}
+    let defaultMagicSize = "wUint8";
+    let size = defaultMagicSize;
 
-function command(dirs: string[], obj: WritableByteObject, data?: any) {
-    obj.wUint8(rfc.COMMAND);
+    for (let i = 1; i < dirs.length; i++) {
+        let toParse = dirs[i];
+        let subItems: string[] = [];
 
-    if (dirs[2] === "meta") {
-        obj.wUint16(rfc.CMD_META);
+        if (!current) {
+            console.error("[protocol] Error formatting current element (no instructions)", toParse);
+            return null;
+        }
 
-        let meta_items = dirs[3].split("+");
-        let meta_opcode = 0;
+        if (multiple) {
+            subItems = toParse.split('+');
+        } else {
+            subItems = [toParse];
+        }
 
-        meta_items.forEach(item => {
-            switch (item) {
-                case "type_layers":
-                    meta_opcode |= rfc.META_LIST_LAYERS_TYPE;
-                    break;
-                case "type_nodes":
-                    meta_opcode |= rfc.META_LIST_NODES_TYPE;
-                    break;
+        let magic = 0;
+        let item: any = current[subItems[0]];
+
+        subItems.forEach(el => {
+            if (!current || !current[el]) {
+                console.error("[protocol] Error formatting current element", el);
+                return null;
             }
+
+            item = current[el];
+
+            magic |= item.magic;
         });
 
-        obj.wUint8(meta_opcode);
+        obj.dyn(size, magic);
+
+        if (item?.subSize) {
+            size = item.subSize;
+        } else {
+            size = defaultMagicSize;
+        }
+
+        current = item?.sub;
+        multiple = item?.multiple;
     }
 
-    if (dirs[2] === "status") {
-        obj.wUint16(rfc.CMD_STATUS);
-    }
+    // data => leave access to byteobject
 
     return obj;
 }
-
-type Factory = {
-    [id: string]: (dirs: string[], obj: WritableByteObject, data?: any) => WritableByteObject;
-};
-
-let factory: Factory = {
-    "create": create,
-    "read": read,
-    "update": update,
-    "delete": del,
-    "del": del,
-    "command": command,
-    "cmd": command,
-};
 
 export const p_send: (p: string, d?: any) => Promise<ByteObject> | null = (path: string, data?: any) => {
 
@@ -106,19 +107,16 @@ export const p_send: (p: string, d?: any) => Promise<ByteObject> | null = (path:
     switch (dirs[0]) {
         case "v0":
             obj.wUint64(BigInt(request_id));
+
+            let ret = writer_v0(dirs, obj, data);
+            if (!ret) return null;
+            obj = ret;
             request_id ++;
             break;
         default:
             console.error("[protocol] Error formatting the following route:", path);
             return null;
     }
-
-    if (!factory[dirs[1]]) {
-        console.error("[protocol] Error formatting the following route:", path);
-        return null;
-    }
-
-    obj = factory[dirs[1]](dirs, obj, data);
 
     return new Promise((resolve) => {
         obj.compile();

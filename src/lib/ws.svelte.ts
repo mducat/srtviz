@@ -1,6 +1,8 @@
 import {ByteObject} from "$lib/byteobject";
 import * as rfc from "./rfc";
 
+import { toast } from 'svoast';
+
 type RequestsBuffer = {
     [id: number]: (req: ByteObject) => void;
 }
@@ -35,15 +37,23 @@ function onMessage(event: any) {
         console.error("[ws] Error received from server with request ID", request_id);
         console.error(`[ws] Debug inf:`, $state.snapshot(state.debug[request_id]));
 
+        let msg;
+
         switch (status) {
             case rfc.STATUS_INTERNAL_ERROR:
-                console.error("[ws] Internal Error", status);
+                msg = "Internal Error";
                 break;
             case rfc.STATUS_INTERNAL_PANIC:
-                console.error("[ws] Internal Panic", status);
+                msg = "Internal Panic"
                 break;
-            default: console.error("[ws] Unrecognized status", status);
+            default: msg = "Unrecognized error status"
         }
+
+        console.error('[ws]', msg, status);
+        toast.error(msg);
+
+        delete state.requests[request_id];
+        delete state.debug[request_id];
 
         return;
     }

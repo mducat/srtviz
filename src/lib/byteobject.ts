@@ -186,5 +186,9 @@ export class WritableByteObject extends ByteObject {
         this.wUint32(s.length);
         this.add(WritableByteObject.encoder.encode(s));
     }
+
+    dyn(type: string, v: any) {
+        (<any>this)[type](v);
+    }
 }
 
