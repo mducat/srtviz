@@ -80,18 +80,36 @@ export class ByteObject {
         return ByteObject.decoder.decode(new Uint8Array(sliced));
     }
 
+    of(type: string) {
+        return (<any>this)[type]();
+    }
+
+    map(keyType: string, valueType: string, sizeType: string = "uint32") {
+        let size = this.of(sizeType);
+        // console.log('size', size);
+
+        let items: any[] = [];
+
+        for (let i = 0; i < size; i++) {
+            let x = [this.of(keyType), this.of(valueType)]
+            items.push(x);
+        }
+
+        return Object.fromEntries(items);
+    }
+
     object(type: (new (...args: any[]) => any)) {
         let args: any = {};
 
         for (const [key, value] of Object.entries(getDataTypes(new type))) {
-            args[String(key)] = ((<any>this)[String(value)]());
+            args[String(key)] = this.of(String(value));
         }
 
         return new type(args);
     }
 
     arrayOf(type: string[] | string | (new (...args: any[]) => any), sizeType: string = "uint32"): Array<any> {
-        let size = (<any>this)[sizeType]();
+        let size = this.of(sizeType);
         // console.debug("size", size);
 
         let result = [];
@@ -100,14 +118,14 @@ export class ByteObject {
             let item;
 
             if (typeof type === "string") {
-                item = (<any>this)[type]();
+                item = this.of(type);
             } else if (typeof type == "function") {
                 item = this.object(type);
             } else {
                 item = [];
 
                 type.forEach((elem) => {
-                    item.push((<any>this)[elem]());
+                    item.push(this.of(elem));
                 });
             }
 

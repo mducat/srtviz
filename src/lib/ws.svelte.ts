@@ -1,7 +1,8 @@
-import {ByteObject} from "$lib/byteobject";
+import {ByteObject, WritableByteObject} from "$lib/byteobject";
 import * as rfc from "./rfc";
-
 import { toast } from 'svoast';
+import {defineRegistry, flushRequests} from "$lib/protocol";
+import {getCookie, setCookie} from "typescript-cookie";
 
 type RequestsBuffer = {
     [id: number]: (req: ByteObject) => void;
@@ -26,6 +27,38 @@ export const state : State = $state({
 
 let ws : WebSocket;
 let connecting : boolean = false;
+
+const registryKey = 'matrixui-registry-tokens';
+
+function connected() {
+    pendingRequests.forEach(request => {
+        // might be useless, left as an exercise for the reader
+        ws.send(request.raw);
+    });
+
+    flushRequests();
+
+    state.connected = true;
+}
+
+function queryRegistry() {
+    console.debug("[ws] Querying registry");
+
+    let query = new WritableByteObject();
+    query.wUint64(BigInt(0));
+    query.wUint16(0);
+
+    query.compile();
+
+    wsSend(query);
+}
+
+
+const flip = (data: Object) => Object.fromEntries(
+    Object
+        .entries(data)
+        .map(([key, value]) => [value, key])
+);
 
 function onMessage(event: any) {
     let data = new ByteObject(event.data);
@@ -58,7 +91,20 @@ function onMessage(event: any) {
         return;
     }
 
-    // data.cursor -= 1;
+    if (request_id === 0) {
+        let registry: any = data.map("uint16", "str");
+
+        registry = flip(registry);
+
+        console.log("[ws] Registry received from server with request ID", request_id, data.data.byteLength);
+
+        // setCookie(registryKey, registry);
+        defineRegistry(registry);
+
+        connected();
+
+        return;
+    }
 
     state.requests[request_id](data);
     delete state.requests[request_id];
@@ -69,6 +115,7 @@ let pendingRequests: ByteObject[] = [];
 
 export const connect = () => {
     if (connecting) { return null; }
+    console.debug("[ws] Connecting...");
 
     connecting = true;
 
@@ -79,12 +126,15 @@ export const connect = () => {
         ws.onopen = function (e) {
             console.log("[ws] Connection established");
 
-            pendingRequests.forEach(request => {
-                ws.send(request.raw);
-            });
-
-            state.connected = true;
             resolve(state.connected);
+            let registry = getCookie(registryKey);
+
+            if (registry) {
+                defineRegistry(registry);
+                connected();
+            } else {
+                queryRegistry();
+            }
         }
 
         ws.addEventListener("message", onMessage);
@@ -114,20 +164,27 @@ export const connect = () => {
     }
  */
 
-
-
-export const send = (req: ByteObject, cb: (r: ByteObject) => void, debug: any) => {
+export const registerCb = (req: ByteObject, cb: (r: ByteObject) => void, debug: any) => {
+    req.cursor = 0;
     let request_id = Number(req.uint64());
 
     state.requests[request_id] = cb;
     state.debug[request_id] = debug;
+}
+
+export const wsSend = (req: ByteObject) => {
+    ws.send(req.raw);
+}
+
+export const send = (req: ByteObject, cb: (r: ByteObject) => void, debug: any) => {
+    registerCb(req, cb, debug);
 
     if (!state.connected) {
         pendingRequests.push(req);
 
         connect();
     } else {
-        ws.send(req.raw);
+        wsSend(req);
     }
 }
 

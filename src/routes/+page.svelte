@@ -9,7 +9,9 @@
     import Prompt from "./components/prompt.svelte";
 
     onMount(() => {
-        p_send("/v0/cmd/meta/type_layers+type_nodes")?.then((data) => {
+
+        console.log('mount')
+        p_send("/v0/cmd/meta/types")?.then((data) => {
             // result payload:
             // const array = new Uint16Array([0x05 | (0x1 << 2 << 8), (0x1 | 0x2)]);
 
