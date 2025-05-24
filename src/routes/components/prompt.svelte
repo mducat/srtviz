@@ -18,7 +18,6 @@
         modal.open()
     }
 
-    // ensure the dialog is closed and return the result
     function close(result: boolean) {
         modal.close()
         onresult(result)
@@ -27,9 +26,6 @@
 
 <Modal bind:this={modal} onclose={() => onresult(false)}>
     <div class="sm:flex  sm:items-start">
-        {#if children}
-            {@render children()}
-        {/if}
         <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
             <h3 class="text-base font-semibold leading-6 text-white" id="modal-title">{title}</h3>
             <div class="mt-2">
@@ -39,6 +35,10 @@
             </div>
         </div>
     </div>
+    {#if children}
+        <br/>
+        {@render children()}
+    {/if}
 
     {#snippet commands()}
         <button

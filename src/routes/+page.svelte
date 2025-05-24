@@ -8,19 +8,22 @@
     import { toast } from 'svoast';
     import Prompt from "./components/prompt.svelte";
 
+    import {layer_types, project} from '$lib/states';
+
     onMount(() => {
 
-        console.log('mount')
         p_send("/v0/cmd/meta/types")?.then((data) => {
-            // result payload:
-            // const array = new Uint16Array([0x05 | (0x1 << 2 << 8), (0x1 | 0x2)]);
-
             let result = {
                 layers: data.arrayOf(LayerType),
                 nodes_type: data.arrayOf(NodeType, "uint64")
             };
 
-            // console.log(result);
+            layer_types.subscribe(v => {
+                console.log(v);
+            })
+
+            layer_types.set(result.layers);
+            console.log('layer_types', layer_types, result.layers);
         });
 
         p_send("/v0/cmd/status")?.then((data) => {
@@ -34,6 +37,8 @@
     })
 
     let layers: any[] = $state([]);
+
+    let projects: number[] = $state([]);
 
     function acceptCreateProject(accepted: boolean) {
         if (!accepted) {
@@ -53,13 +58,51 @@
 
     function openProject() {
         p_send("/v0/read/project")?.then((data) => {
-            let projects = data.arrayOf("uint16");
+            projects = data.arrayOf("uint16");
             toast.info(`Projects: ${projects}`);
+            console.log(projects);
         });
     }
 
     let acceptNewProject: Prompt;
+    let createNewLayer: Prompt;
     let accepted: boolean;
+
+    let selectProjectPopup: HTMLElement;
+
+    function selectProject(projectId: number) {
+        selectProjectPopup.hidePopover();
+
+        project.set(projectId);
+    }
+
+    function createLayerPrompt() {
+        createNewLayer.open();
+    }
+
+    function createLayer() {
+        let layer_type_id = layerTypeSelect.value;
+
+        console.log('CREATE LAYER WITH ID', layer_type_id);
+
+        p_send("/v0/create/layer", (r) => {
+            r.wUint16($project);
+            r.wInt8(layer_type_id);
+        })?.then((data) => {
+            let layer_id = data.uint16();
+            toast.info(`Layer: ${layer_id}`);
+            console.log(layer_id);
+
+            p_send("/v0/read/layer")?.then((data) => {
+                let all_layers = data.map("uint16", "str");
+
+                toast.info(JSON.stringify(all_layers));
+                console.log(all_layers);
+            });
+        });
+    }
+
+    let layerTypeSelect: HTMLElement;
 
 </script>
 
@@ -82,8 +125,18 @@
             <h2 class="card-title">Tools</h2>
             <div class="flex">
                 <button class="btn btn-primary mx-1" onclick={createProject}>Create project</button>
-                <button class="btn btn-primary mx-1" onclick={openProject}>Open project</button>
+                <button class="btn btn-primary mx-1" popovertarget="popover-1" onclick={openProject}>Open project</button>
+                {#if project}
+                    <button class="btn btn-primary mx-1" onclick={createLayerPrompt}>Create layer</button>
+                {/if}
             </div>
+            <ul bind:this={selectProjectPopup} class="dropdown menu w-52 rounded-box bg-base-100 shadow-sm"
+                popover id="popover-1" style="position-anchor:--anchor-1">
+                {#each projects as prj}
+                    <!-- hidePopover() -->
+                    <li><a onclick={() => selectProject(prj)}>{prj}</a></li>
+                {/each}
+            </ul>
         </div>
     </div>
 
@@ -94,5 +147,20 @@
             label="Create"
             onresult={acceptCreateProject}
     ><div></div></Prompt>
+
+    <Prompt
+            bind:this={createNewLayer}
+            title="Create Layer"
+            description="What type of layer do you want to create?"
+            label="Create"
+            onresult={createLayer}
+    >
+        <select bind:this={layerTypeSelect} class="select">
+            <option disabled selected>Select a layer type</option>
+            {#each $layer_types as layer}
+                <option value={layer.layer_id}>{layer.name}</option>
+            {/each}
+        </select>
+    </Prompt>
 
 </div>

@@ -3,6 +3,7 @@ import * as rfc from "./rfc";
 import { toast } from 'svoast';
 import {defineRegistry, flushRequests} from "$lib/protocol";
 import {getCookie, setCookie} from "typescript-cookie";
+import { dev } from "$app/environment";
 
 type RequestsBuffer = {
     [id: number]: (req: ByteObject) => void;
@@ -98,7 +99,7 @@ function onMessage(event: any) {
 
         console.log("[ws] Registry received from server with request ID", request_id, data.data.byteLength);
 
-        // setCookie(registryKey, registry);
+        setCookie(registryKey, JSON.stringify(registry), { sameSite: 'strict' });
         defineRegistry(registry);
 
         connected();
@@ -128,6 +129,17 @@ export const connect = () => {
 
             resolve(state.connected);
             let registry = getCookie(registryKey);
+            if (registry) {
+                try {
+                    registry = JSON.parse(registry);
+                } catch (e) {
+                    registry = undefined;
+                }
+            }
+
+            if (dev) {
+                registry = undefined;
+            }
 
             if (registry) {
                 defineRegistry(registry);
