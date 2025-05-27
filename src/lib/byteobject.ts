@@ -71,6 +71,20 @@ export class ByteObject {
         return value;
     }
 
+    float32() {
+        let value = this.data.getFloat32(this.cursor, this.endian);
+        this.cursor += 4;
+
+        return value;
+    }
+
+    float64() {
+        let value = this.data.getFloat64(this.cursor, this.endian);
+        this.cursor += 8;
+
+        return value;
+    }
+
     str() {
         let len = this.uint32();
 

@@ -54,4 +54,14 @@ export class NodeType {
     @typed("str")    name: string = "";
 }
 
+@dataclass("GraphNode")
+export class GraphNode {
+    @typed("uint32") id: number = 0;
+    @typed("str")  name: string = "";
+}
 
+@dataclass("GraphLink")
+export class GraphLink {
+    @typed("uint32") source: number = 0;
+    @typed("uint32") target: number = 0;
+}

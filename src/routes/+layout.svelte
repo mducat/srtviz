@@ -31,12 +31,12 @@
                     </svg>
                 </label>
             </div>
-            <div class="mx-2 flex-1 px-2">Matrix UI</div>
+            <div class="mx-2 flex-1 px-2">SRTVIZ</div>
             <div class="hidden flex-none lg:block">
                 <ul class="menu menu-horizontal">
-                    <!-- Navbar menu content here -->
+                    <!-- Navbar menu content here
                     <li><a href="/about">about</a></li>
-                    <li><a href="/demo">demo</a></li>
+                    <li><a href="/demo">demo</a></li>-->
                 </ul>
             </div>
         </div>
@@ -45,9 +45,9 @@
     <div class="drawer-side">
         <label for="my-drawer-3" aria-label="close sidebar" class="drawer-overlay"></label>
         <ul class="menu bg-base-200 min-h-full w-80 p-4">
-            <!-- Sidebar content here -->
+            <!-- Sidebar content here
             <li><span>Sidebar Item 1</span></li>
-            <li><span>Sidebar Item 2</span></li>
+            <li><span>Sidebar Item 2</span></li>-->
         </ul>
     </div>
 </div>

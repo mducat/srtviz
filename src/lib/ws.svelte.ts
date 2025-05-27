@@ -107,6 +107,11 @@ function onMessage(event: any) {
         return;
     }
 
+    if (!state.requests[request_id]) {
+        console.log('received from server with unknown request ID', request_id);
+        return;
+    }
+
     state.requests[request_id](data);
     delete state.requests[request_id];
     delete state.debug[request_id];

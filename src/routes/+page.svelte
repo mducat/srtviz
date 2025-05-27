@@ -18,12 +18,7 @@
                 nodes_type: data.arrayOf(NodeType, "uint64")
             };
 
-            layer_types.subscribe(v => {
-                console.log(v);
-            })
-
             layer_types.set(result.layers);
-            console.log('layer_types', layer_types, result.layers);
         });
 
         p_send("/v0/cmd/status")?.then((data) => {
@@ -34,9 +29,14 @@
             console.log(`Protocol v${vMaj}.${vMin}.${vPatch}`);
         });
 
+        project.subscribe(r => {
+            if ($project > 0) {
+                readLayers();
+            }
+        })
     })
 
-    let layers: any[] = $state([]);
+    let layers: Object = $state({});
 
     let projects: number[] = $state([]);
 
@@ -74,16 +74,46 @@
         selectProjectPopup.hidePopover();
 
         project.set(projectId);
+        readLayers();
     }
 
     function createLayerPrompt() {
         createNewLayer.open();
     }
 
+    function readLayers() {
+
+        p_send("/v0/read/layer", (r) => {
+            r.wUint16($project);
+        })?.then((data) => {
+            let all_layers = data.map("uint16", "str");
+
+            toast.info(JSON.stringify(all_layers));
+
+            layers = all_layers;
+        });
+
+    }
+
+    let layer_id = $state(-1);
+
+    function selectLayer(newId: number) {
+        layer_id = newId;
+        console.log('selectLayer', layer_id, (layer_id >= 0));
+        currentView.refreshGraph();
+    }
+
+    function createDemo() {
+        p_send("/v0/create/demo", (r) => {
+            r.wUint16($project);
+            r.wUint16(layer_id);
+        })?.then(() => {
+            currentView.refreshGraph();
+        });
+    }
+
     function createLayer() {
         let layer_type_id = layerTypeSelect.value;
-
-        console.log('CREATE LAYER WITH ID', layer_type_id);
 
         p_send("/v0/create/layer", (r) => {
             r.wUint16($project);
@@ -91,30 +121,47 @@
         })?.then((data) => {
             let layer_id = data.uint16();
             toast.info(`Layer: ${layer_id}`);
-            console.log(layer_id);
 
-            p_send("/v0/read/layer")?.then((data) => {
-                let all_layers = data.map("uint16", "str");
+            readLayers();
+        });
+    }
 
-                toast.info(JSON.stringify(all_layers));
-                console.log(all_layers);
-            });
+    function runThread() {
+        p_send("/v0/cmd/start", (r) => {
+            r.wUint16($project);
+        })?.then(() => {
+            toast.attention("Project started!");
+        });
+    }
+
+    function stopThread() {
+        p_send("/v0/cmd/stop", (r) => {
+            r.wUint16($project);
+        })?.then(() => {
+            toast.attention("Project stopped!");
         });
     }
 
     let layerTypeSelect: HTMLElement;
 
+    let currentView: NodesView;
+
 </script>
 
 <div style="height: 100%" class="flex">
 
-    {#if layers.length}
+    {#if layers}
         <div class="bg-neutral text-neutral-content w-fit m-2 p-2 rounded-xl">
             <div class="tabs tabs-border bg-neutral rounded-xl">
-                {#each layers as layer}
-                    <input type="radio" name="my_tabs_2" class="tab border-accent" aria-label="Tab 1" checked="checked" />
+                {#each Object.entries(layers) as [layer_id, layer_name]}
+                    <input onclick={() => selectLayer(Number(layer_id))}
+                           type="radio"
+                           name="my_tabs_2"
+                           class="tab border-accent"
+                           aria-label={layer_name}
+                           checked="checked" />
                     <div class="tab-content border-base-300 bg-neutral p-10 rounded-xl">
-                        <NodesView></NodesView>
+                        <NodesView bind:this={currentView} project_id={$project} layer_id={Number(layer_id)}></NodesView>
                     </div>
                 {/each}
             </div>
@@ -128,6 +175,14 @@
                 <button class="btn btn-primary mx-1" popovertarget="popover-1" onclick={openProject}>Open project</button>
                 {#if project}
                     <button class="btn btn-primary mx-1" onclick={createLayerPrompt}>Create layer</button>
+                {/if}
+                {#if layer_id >= 0}
+                    <button class="btn btn-primary mx-1" onclick={createDemo}>Create demo</button>
+                {/if}
+                <br>
+                {#if project}
+                    <button class="btn btn-primary mx-1" onclick={runThread}>Start sim</button>
+                    <button class="btn btn-primary mx-1" onclick={stopThread}>Stop sim</button>
                 {/if}
             </div>
             <ul bind:this={selectProjectPopup} class="dropdown menu w-52 rounded-box bg-base-100 shadow-sm"
